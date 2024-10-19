@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "a9b86b1c-2e9b-40d1-bb71-0a8164f675a1"
+				"spark.autotune.trackingId": "003a0b77-915a-4de9-b730-26f3298d5ce6"
 			}
 		},
 		"metadata": {
@@ -75,7 +75,8 @@
 					},
 					"microsoft": {
 						"language": "python"
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"%%pyspark\n",
@@ -83,9 +84,29 @@
 					"## If header exists uncomment line below\n",
 					", header=True\n",
 					")\n",
-					"display(df.limit(10))"
+					"display(workouts_raw.limit(10))"
 				],
-				"execution_count": null
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"exercises = workouts_raw.select('exercise_title').distinct()\n",
+					"display(exercises.limit(10))"
+				],
+				"execution_count": 14
 			},
 			{
 				"cell_type": "markdown",
