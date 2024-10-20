@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "003a0b77-915a-4de9-b730-26f3298d5ce6"
+				"spark.autotune.trackingId": "b901d648-4562-465d-8016-c8f2f00271a1"
 			}
 		},
 		"metadata": {
@@ -58,7 +58,12 @@
 					}
 				},
 				"source": [
-					"1. Load exported JSON"
+					"1. Load exported JSON\n",
+					"- Embelish\n",
+					"    1. Add set_weight\n",
+					"2. Get all exercises\n",
+					"3. Get all workouts\n",
+					""
 				]
 			},
 			{
@@ -80,13 +85,10 @@
 				},
 				"source": [
 					"%%pyspark\n",
-					"workouts_raw = spark.read.load('abfss://hevy@hevy.dfs.core.windows.net/Workout/workouts.csv', format='csv'\n",
-					"## If header exists uncomment line below\n",
-					", header=True\n",
-					")\n",
+					"workouts_raw = spark.read.load('abfss://hevy@hevy.dfs.core.windows.net/Workout/workouts.csv', format='csv', header=True)\n",
 					"display(workouts_raw.limit(10))"
 				],
-				"execution_count": 4
+				"execution_count": 25
 			},
 			{
 				"cell_type": "code",
@@ -103,10 +105,102 @@
 					"collapsed": false
 				},
 				"source": [
-					"exercises = workouts_raw.select('exercise_title').distinct()\n",
+					"\n",
+					"from pyspark.sql.functions import col\n",
+					"\n",
+					"\n",
+					"workouts = workouts_raw.withColumn('set_weight', col('weight_kg') * col('reps'))\n",
+					""
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"without_warmsups = workouts.filter(workouts.set_type != 'warmup')\n",
+					"\n",
+					"display(workouts.count())\n",
+					"display(without_warmsups.count())"
+				],
+				"execution_count": 31
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"from pyspark.sql.functions import sum as spark_sum\n",
+					"from pyspark.sql.functions import col, max as spark_max, min as spark_min, expr\n",
+					"\n",
+					"\n",
+					"load_stats = workouts.groupBy(\"exercise_title\").agg(\n",
+					"    spark_max(\"set_weight\").alias(\"max_load\"),\n",
+					"    spark_min(\"set_weight\").alias(\"min_load\")\n",
+					")\n",
+					"\n",
+					"without_warmups_load_stats = without_warmsups.groupBy(\"exercise_title\").agg(\n",
+					"    spark_max(\"set_weight\").alias(\"max_load\"),\n",
+					"    spark_min(\"set_weight\").alias(\"min_load\")\n",
+					")\n",
+					"\n",
+					"# Step 3: Calculate the percentage difference between the heaviest and lightest set\n",
+					"load_stats = load_stats.withColumn(\n",
+					"    \"percentage_difference\",\n",
+					"    expr(\"((max_load / min_load) * 100) - 100\")\n",
+					")\n",
+					"\n",
+					"without_warmups_load_stats = without_warmups_load_stats.withColumn(\n",
+					"    \"percentage_difference\",\n",
+					"    expr(\"((max_load / min_load) * 100) - 100\")\n",
+					")\n",
+					"\n",
+					"\n",
+					"\n",
+					"# Show the result\n",
+					"display(without_warmups_load_stats)"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"exercises = workouts.select('exercise_title').distinct()\n",
 					"display(exercises.limit(10))"
 				],
-				"execution_count": 14
+				"execution_count": 29
 			},
 			{
 				"cell_type": "markdown",
